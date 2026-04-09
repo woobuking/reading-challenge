@@ -217,6 +217,130 @@
     }
 
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Book Progress Runner */
+    .book-progress-card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 16px 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+
+    .book-section-header {
+      font-size: 15px;
+      font-weight: 700;
+      color: #2d3748;
+      margin-bottom: 14px;
+    }
+
+    .runner-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .runner-track-area {
+      flex: 1;
+      position: relative;
+      height: 40px;
+    }
+
+    .runner-track-bg {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 6px;
+      background: #e2e8f0;
+      border-radius: 3px;
+      transform: translateY(-50%);
+      overflow: hidden;
+    }
+
+    .runner-track-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea, #764ba2);
+      border-radius: 3px;
+      transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .runner-emoji {
+      position: absolute;
+      top: 50%;
+      font-size: 22px;
+      transform: translate(-50%, -50%);
+      transition: left 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 2;
+      line-height: 1;
+    }
+
+    .trophy-emoji {
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+
+    .runner-label {
+      text-align: center;
+      font-size: 12px;
+      color: #a0aec0;
+      font-weight: 600;
+      margin-bottom: 14px;
+    }
+
+    .today-chapters-wrap {
+      border-top: 1px solid #f0f4f8;
+      padding-top: 14px;
+    }
+
+    .today-chapters-header {
+      font-size: 12px;
+      font-weight: 700;
+      color: #a0aec0;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 8px;
+    }
+
+    .chapter-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      background: #f7f8fc;
+      border-radius: 10px;
+      margin-bottom: 6px;
+    }
+
+    .chapter-item:last-child { margin-bottom: 0; }
+
+    .chapter-num {
+      min-width: 26px;
+      height: 26px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .chapter-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #2d3748;
+    }
+
+    .chapter-empty {
+      font-size: 13px;
+      color: #a0aec0;
+      text-align: center;
+      padding: 8px;
+    }
   </style>
 </head>
 <body>
@@ -237,6 +361,25 @@
     <div class="count-label" id="count-display">0 / 21명 인증</div>
     <div class="progress-bar">
       <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+  </div>
+
+  <!-- Book Progress Runner -->
+  <div class="book-progress-card">
+    <div class="book-section-header">📖 책 진행도</div>
+    <div class="runner-wrapper">
+      <div class="runner-track-area">
+        <div class="runner-track-bg">
+          <div class="runner-track-fill" id="runner-fill" style="width:0%"></div>
+        </div>
+        <div class="runner-emoji" id="runner-emoji" style="left:0%">🏃</div>
+      </div>
+      <div class="trophy-emoji">🏆</div>
+    </div>
+    <div class="runner-label" id="runner-label">0 / 45 챕터 완료</div>
+    <div class="today-chapters-wrap">
+      <div class="today-chapters-header">오늘의 챕터</div>
+      <div id="today-chapters-list"></div>
     </div>
   </div>
 
@@ -270,6 +413,96 @@ const MEMBERS = [
   '올댓드림', '오늘날씨맑음', '꿀람쥐', '꿈을 현실로', '뚜연',
   '라난', '럭셔리 노블', '레리꼬', '부자될또정', '하예', '뿌래랠래'
 ];
+
+// =====================
+//  책 챕터 데이터
+// =====================
+const CHAPTERS = [
+  '금은 원래 흙이었다',
+  '개츠비와 이노크, 두 가지 죽음 앞에서',
+  '기회는 반드시 위기 속에서 나온다',
+  '10년 주기론',
+  '돈이 좋아하는 것들',
+  '오늘의 법칙',
+  '좋은 돈과 나쁜 돈',
+  '부자가 되는 건 일거리가 달라지는 것',
+  '자발적 피로를 선택하라',
+  '부시맨의 콜라병',
+  '무엇을 기다리는가',
+  '경기가 좋지 않을 때 해야 하는 것',
+  '가장 절망적인 악덕은 무지다',
+  '돈을 부르는 자세가 있다',
+  '낚시로부터 배운 것',
+  '1달러를 벌어보자',
+  '경쟁하지 말고 독점하는 법',
+  '아무도 거들떠보지 않는 곳에 돈이 있다',
+  '생각과 경험을 팔아야 큰돈을 벌 수 있다',
+  '소비자가 아닌 생산자가 되어라',
+  '위대한 3분의 법칙',
+  '결국, 한 단어를 찾는 힘이다',
+  '성공을 설명하는 하나의 단어',
+  '이기적인 마음을 이용하라',
+  '우연한 기회에 발견하는 것',
+  '당연하다는 말의 의미',
+  '일을 대하는 태도',
+  '끈기의 뜻',
+  '한 우물을 팔 것인가, 여러 우물을 팔 것인가',
+  '투자의 5계명',
+  '공부하고, 투자하라, 그리고 기다려라',
+  "당신의 '곰스크'는 어디에 있는가",
+  '변하지 않는 성공의 단 한 가지 법칙',
+  '무한히 애쓸 수 있는 능력',
+  '돈 버는 습관: 어떤, 행위를, 저절로',
+  '일론 머스크에게는 있고, 당신에게는 없는 것',
+  '호리병이 아닌 대접에 담을 것',
+  '미래를 예측하는 법',
+  '근로 소득을 높이는 방법',
+  "'이곳'에서 '저곳'으로 넘어가는 원리",
+  '뻔하게 사는 게 정답이다',
+  '상상의 거인을 키워라',
+  '"누구나 다 그렇게 될 수는 없잖아요?"',
+  '고통을 이기지 못하면 고통이 그대를 이길 것이다',
+  '비밀의 개수와 부는 비례한다'
+];
+const BOOK_START = new Date('2026-03-27T00:00:00');
+const CHAPTERS_PER_DAY = 2;
+
+function getBookProgress(dateStr) {
+  const selected = new Date(dateStr + 'T00:00:00');
+  const diffDays = Math.floor((selected - BOOK_START) / 86400000);
+  const total = CHAPTERS.length;
+
+  if (diffDays < 0) return { completed: 0, total, todayChapters: [] };
+
+  const completed = Math.min((diffDays + 1) * CHAPTERS_PER_DAY, total);
+  const startIdx = diffDays * CHAPTERS_PER_DAY;
+  const todayChapters = [];
+  for (let i = startIdx; i < Math.min(startIdx + CHAPTERS_PER_DAY, total); i++) {
+    todayChapters.push({ num: i + 1, title: CHAPTERS[i] });
+  }
+  return { completed, total, todayChapters };
+}
+
+function renderBookProgress(dateStr) {
+  const { completed, total, todayChapters } = getBookProgress(dateStr);
+  const percent = total > 0 ? (completed / total) * 100 : 0;
+
+  document.getElementById('runner-fill').style.width = `${percent}%`;
+  document.getElementById('runner-emoji').style.left = `${Math.min(percent, 98)}%`;
+  document.getElementById('runner-label').textContent = `${completed} / ${total} 챕터 완료`;
+
+  const container = document.getElementById('today-chapters-list');
+  if (todayChapters.length === 0) {
+    container.innerHTML = '<div class="chapter-empty">챌린지 기간 외</div>';
+  } else {
+    container.innerHTML = todayChapters.map(ch =>
+      `<div class="chapter-item">
+        <div class="chapter-num">${ch.num}</div>
+        <div class="chapter-title">${ch.title}</div>
+      </div>`
+    ).join('');
+  }
+}
 
 let sheetData = {};
 let tokenCache = { accessToken: '', tokenExpiry: 0 };
@@ -315,6 +548,8 @@ function render() {
     // onclick 없음 → 클릭해도 아무 반응 없음
     grid.appendChild(btn);
   });
+
+  renderBookProgress(date);
 }
 
 // =====================
