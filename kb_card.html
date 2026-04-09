@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KB Biz 카드 분석</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', Arial, sans-serif;
+  background: #f5f7fa;
+  color: #2d3748;
+  min-height: 100vh;
+}
+header {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: #1a1a1a;
+  padding: 18px 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+header h1 { font-size: 1.25rem; font-weight: 700; }
+header small { font-size: 0.78rem; opacity: 0.7; margin-top: 2px; display: block; }
+.container { max-width: 1100px; margin: 0 auto; padding: 20px 16px; }
+
+/* Upload */
+.upload-area {
+  border: 2px dashed #d1d5db;
+  border-radius: 12px;
+  padding: 36px;
+  text-align: center;
+  cursor: pointer;
+  background: white;
+  transition: all 0.2s;
+  margin-bottom: 20px;
+}
+.upload-area:hover, .upload-area.drag-over {
+  border-color: #f59e0b;
+  background: #fffbeb;
+}
+.upload-icon { font-size: 2.8rem; margin-bottom: 10px; }
+.upload-area p { color: #6b7280; font-size: 0.9rem; }
+.upload-area strong { color: #111827; }
+#fileInput { display: none; }
+
+/* Tier selector */
+.tier-bar {
+  background: white;
+  border-radius: 12px;
+  padding: 14px 20px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+}
+.tier-bar label { font-weight: 700; font-size: 0.9rem; white-space: nowrap; }
+.tier-btn {
+  padding: 7px 18px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 600;
+  transition: all 0.15s;
+  font-family: inherit;
+  color: #374151;
+}
+.tier-btn:hover { border-color: #f59e0b; }
+.tier-btn.active { border-color: #f59e0b; background: #fef3c7; color: #92400e; }
+.tier-note { font-size: 0.78rem; color: #9ca3af; margin-left: auto; }
+
+/* Dashboard */
+#dashboard { display: none; }
+
+/* Cards */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+}
+.card-label { font-size: 0.75rem; color: #6b7280; margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+.card-value { font-size: 1.5rem; font-weight: 700; color: #111827; }
+.card-sub { font-size: 0.78rem; color: #9ca3af; margin-top: 3px; }
+.card-value.ok { color: #059669; }
+.card-value.warn { color: #dc2626; }
+
+/* Progress */
+.progress-section {
+  background: white;
+  border-radius: 12px;
+  padding: 18px 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+  margin-bottom: 20px;
+}
+.section-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 14px; }
+.progress-item { margin-bottom: 14px; }
+.progress-item:last-child { margin-bottom: 0; }
+.prog-header { display: flex; justify-content: space-between; margin-bottom: 6px; }
+.prog-label { font-size: 0.88rem; font-weight: 600; }
+.prog-amount { font-size: 0.82rem; color: #6b7280; }
+.prog-bar-bg { background: #e5e7eb; border-radius: 99px; height: 10px; overflow: hidden; }
+.prog-bar-fill { height: 100%; border-radius: 99px; transition: width 0.5s ease; }
+.tier1-fill { background: linear-gradient(90deg, #f59e0b, #fcd34d); }
+.tier2-fill { background: linear-gradient(90deg, #ef4444, #f97316); }
+.achieved { color: #059669; font-weight: 700; }
+
+/* Section */
+.section {
+  background: white;
+  border-radius: 12px;
+  padding: 18px 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+  margin-bottom: 20px;
+  overflow-x: auto;
+}
+
+/* Table */
+table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+th {
+  background: #f9fafb;
+  padding: 9px 12px;
+  text-align: left;
+  font-weight: 700;
+  color: #4b5563;
+  border-bottom: 2px solid #e5e7eb;
+  white-space: nowrap;
+}
+td { padding: 9px 12px; border-bottom: 1px solid #f3f4f6; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #fafafa; }
+.text-right { text-align: right; }
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 0.73rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.badge-fav { background: #fef3c7; color: #92400e; }
+.badge-basic { background: #dbeafe; color: #1e40af; }
+.badge-other { background: #f3f4f6; color: #6b7280; }
+.diff-warn { color: #dc2626; font-weight: 700; }
+.diff-ok { color: #059669; }
+.diff-na { color: #9ca3af; }
+.total-row td { font-weight: 700; background: #f9fafb !important; border-top: 2px solid #e5e7eb; }
+
+/* TX list */
+.tx-filters { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.tx-filter-btn {
+  padding: 5px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 99px;
+  background: white;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-family: inherit;
+  transition: all 0.15s;
+  color: #374151;
+}
+.tx-filter-btn:hover { border-color: #f59e0b; }
+.tx-filter-btn.active { background: #f59e0b; border-color: #f59e0b; color: white; }
+.tx-list { max-height: 420px; overflow-y: auto; }
+.tx-row {
+  display: grid;
+  grid-template-columns: 70px 1fr 90px 80px 70px;
+  align-items: center;
+  padding: 9px 12px;
+  border-bottom: 1px solid #f3f4f6;
+  gap: 8px;
+  font-size: 0.86rem;
+}
+.tx-row:hover { background: #fafafa; }
+.tx-date { color: #6b7280; font-size: 0.78rem; }
+.tx-merchant { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tx-amount { text-align: right; font-weight: 600; }
+.tx-amount.exempt { color: #9ca3af; }
+.tx-filepoints { text-align: right; font-size: 0.78rem; color: #6b7280; }
+.tx-cat { text-align: right; }
+.empty-state { text-align: center; padding: 36px; color: #9ca3af; }
+
+/* File loaded state */
+.upload-loaded { cursor: pointer; }
+</style>
+</head>
+<body>
+
+<header>
+  <span style="font-size:1.7rem">💳</span>
+  <div>
+    <h1>KB Biz 카드 분석 대시보드</h1>
+    <small>이용내역 업로드 → 실적·포인트 자동 분석</small>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- 업로드 -->
+  <div class="upload-area" id="uploadArea">
+    <div class="upload-icon">📂</div>
+    <p><strong>KB Biz 카드 이용내역 파일을 드래그하거나 클릭하세요</strong></p>
+    <p style="margin-top:6px">Excel (.xlsx) 파일</p>
+    <input type="file" id="fileInput" accept=".xlsx,.xls">
+  </div>
+
+  <!-- 구간 선택 -->
+  <div class="tier-bar">
+    <label>현재 적용 구간:</label>
+    <button class="tier-btn active" data-tier="0">미달성</button>
+    <button class="tier-btn" data-tier="1">1구간 (전월 40만원↑)</button>
+    <button class="tier-btn" data-tier="2">2구간 (전월 80만원↑)</button>
+    <span class="tier-note">※ 전월 실적 기준으로 직접 선택하세요</span>
+  </div>
+
+  <!-- 대시보드 -->
+  <div id="dashboard">
+
+    <!-- 요약 카드 -->
+    <div class="cards-grid">
+      <div class="card">
+        <div class="card-label">총 이용금액</div>
+        <div class="card-value" id="totalAmount">-</div>
+        <div class="card-sub" id="txCount">-</div>
+      </div>
+      <div class="card">
+        <div class="card-label">실적 금액</div>
+        <div class="card-value" id="perfAmount">-</div>
+        <div class="card-sub">실적유예 제외</div>
+      </div>
+      <div class="card">
+        <div class="card-label">파일 적립예정포인트</div>
+        <div class="card-value" id="filePointsTotal">-</div>
+        <div class="card-sub" id="calcPointsSub">계산: -</div>
+      </div>
+      <div class="card">
+        <div class="card-label">포인트 차이</div>
+        <div class="card-value" id="pointDiff">-</div>
+        <div class="card-sub" id="pointDiffNote">-</div>
+      </div>
+    </div>
+
+    <!-- 실적 진행바 -->
+    <div class="progress-section">
+      <div class="section-title">📊 월간 실적 진행</div>
+      <div class="progress-item">
+        <div class="prog-header">
+          <span class="prog-label">1구간 달성 (40만원)</span>
+          <span class="prog-amount" id="prog1Text">-</span>
+        </div>
+        <div class="prog-bar-bg">
+          <div class="prog-bar-fill tier1-fill" id="prog1Bar" style="width:0%"></div>
+        </div>
+      </div>
+      <div class="progress-item">
+        <div class="prog-header">
+          <span class="prog-label">2구간 달성 (80만원)</span>
+          <span class="prog-amount" id="prog2Text">-</span>
+        </div>
+        <div class="prog-bar-bg">
+          <div class="prog-bar-fill tier2-fill" id="prog2Bar" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 카테고리 분석 -->
+    <div class="section">
+      <div class="section-title">🏷️ 카테고리별 분석</div>
+      <table>
+        <thead>
+          <tr>
+            <th>카테고리</th>
+            <th>구분</th>
+            <th class="text-right">이용금액</th>
+            <th class="text-right">적립률 / 한도</th>
+            <th class="text-right">계산 포인트</th>
+            <th class="text-right">파일 포인트</th>
+            <th class="text-right">차이</th>
+          </tr>
+        </thead>
+        <tbody id="categoryTable"></tbody>
+      </table>
+    </div>
+
+    <!-- 이용내역 -->
+    <div class="section">
+      <div class="section-title">📋 이용내역</div>
+      <div class="tx-filters">
+        <button class="tx-filter-btn active" data-filter="all">전체</button>
+        <button class="tx-filter-btn" data-filter="fav">Biz Favorite</button>
+        <button class="tx-filter-btn" data-filter="basic">Biz Basic</button>
+        <button class="tx-filter-btn" data-filter="other">기타</button>
+      </div>
+      <div class="tx-list" id="txList"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ─── 카테고리 설정 ───────────────────────────────────────────────
+const CATEGORIES = [
+  {
+    name: '주유',
+    group: 'Biz Favorite',
+    exempt: true,
+    keywords: ['sk주유', 'gs주유', 'sk에너지', 'gs칼텍스', '주유소', '충전소', '알뜰주유', 'gs&work', 'gs칼'],
+    rate: null,
+    limits: [null, null],
+    note: '리터당 할인'
+  },
+  {
+    name: '대형할인점',
+    group: 'Biz Favorite',
+    exempt: true,
+    keywords: ['이마트', '홈플러스', '롯데마트', 'emart'],
+    rate: 0.15,
+    limits: [15000, 20000]
+  },
+  {
+    name: '인터넷쇼핑',
+    group: 'Biz Favorite',
+    exempt: true,
+    keywords: ['쿠팡', 'g마켓', '지마켓', '옥션', '11번가', '인터파크', 'ssg닷컴', 'ssg.com', '스마일'],
+    rate: 0.15,
+    limits: [15000, 20000]
+  },
+  {
+    name: '정수기',
+    group: 'Biz Basic',
+    exempt: false,
+    keywords: ['코웨이', '청호나이스', '웰스', '정수기', '바디프렌드', 'coway'],
+    rate: 0.10,
+    limits: [10000, 10000]
+  },
+  {
+    name: '통신비',
+    group: 'Biz Basic',
+    exempt: false,
+    keywords: ['sk텔레콤', 'skt', 'kt주식', 'kt인터넷', 'kt통신', 'olleh', 'lgu+', 'lg유플', 'u+요금', '통신요금', 'kt요금'],
+    rate: 0.10,
+    limits: [10000, 10000]
+  },
+  {
+    name: '배달의민족',
+    group: 'Biz Basic',
+    exempt: false,
+    keywords: ['우아한형제들', '배달의민족', '플러스o2o', '플러스 o2o', 'baemin'],
+    rate: 0.10,
+    limits: [10000, 10000]
+  }
+];
+
+// ─── 상태 ─────────────────────────────────────────────────────────
+let currentTier = 0;
+let transactions = [];
+let currentFilter = 'all';
+
+// ─── 유틸 ─────────────────────────────────────────────────────────
+function categorize(merchant) {
+  const m = merchant.toLowerCase().replace(/\s+/g, '');
+  for (const cat of CATEGORIES) {
+    if (cat.keywords.some(k => m.includes(k.toLowerCase().replace(/\s+/g, '')))) {
+      return cat;
+    }
+  }
+  return null;
+}
+
+function calcCatPoints(totalAmount, cat) {
+  if (!cat || cat.rate === null) return null;
+  if (currentTier === 0) return 0;
+  const limit = cat.limits[currentTier - 1];
+  if (limit === null) return null;
+  return Math.min(Math.round(totalAmount * cat.rate), limit);
+}
+
+function fmt(n) {
+  if (n == null) return '-';
+  return '₩' + Math.round(n).toLocaleString('ko-KR');
+}
+function fmtP(n) {
+  if (n == null) return '-';
+  return Math.round(n).toLocaleString('ko-KR') + 'P';
+}
+
+// ─── 렌더링 ───────────────────────────────────────────────────────
+function render() {
+  if (!transactions.length) return;
+
+  // 집계
+  let totalAmt = 0, perfAmt = 0, totalFile = 0;
+  const catAgg = {};
+  CATEGORIES.forEach(c => { catAgg[c.name] = { amt: 0, file: 0, cat: c }; });
+  let otherAmt = 0, otherFile = 0;
+
+  transactions.forEach(tx => {
+    totalAmt += tx.amount;
+    totalFile += tx.filePoints;
+    if (!tx.cat || !tx.cat.exempt) perfAmt += tx.amount;
+
+    if (tx.cat) {
+      catAgg[tx.cat.name].amt += tx.amount;
+      catAgg[tx.cat.name].file += tx.filePoints;
+    } else {
+      otherAmt += tx.amount;
+      otherFile += tx.filePoints;
+    }
+  });
+
+  // 카테고리별 계산 포인트 (월 한도 적용)
+  let totalCalc = 0;
+  CATEGORIES.forEach(c => {
+    const agg = catAgg[c.name];
+    agg.calc = calcCatPoints(agg.amt, c);
+    if (agg.calc !== null) totalCalc += agg.calc;
+  });
+
+  // 요약 카드
+  document.getElementById('totalAmount').textContent = fmt(totalAmt);
+  document.getElementById('txCount').textContent = `총 ${transactions.length}건`;
+  document.getElementById('perfAmount').textContent = fmt(perfAmt);
+  document.getElementById('filePointsTotal').textContent = fmtP(totalFile);
+  document.getElementById('calcPointsSub').textContent = `계산: ${fmtP(totalCalc)}`;
+
+  const diff = totalFile - totalCalc;
+  const diffEl = document.getElementById('pointDiff');
+  const diffNote = document.getElementById('pointDiffNote');
+  if (Math.abs(diff) <= 10) {
+    diffEl.textContent = '✅ 일치';
+    diffEl.className = 'card-value ok';
+    diffNote.textContent = '파일과 계산 일치';
+  } else {
+    diffEl.textContent = (diff > 0 ? '+' : '') + fmtP(diff);
+    diffEl.className = 'card-value warn';
+    diffNote.textContent = diff > 0 ? '파일이 더 높음' : '파일이 더 낮음';
+  }
+
+  // 진행바
+  const p1 = Math.min(perfAmt / 400000, 1);
+  const p2 = Math.min(perfAmt / 800000, 1);
+  document.getElementById('prog1Bar').style.width = (p1 * 100) + '%';
+  document.getElementById('prog2Bar').style.width = (p2 * 100) + '%';
+  const rem1 = Math.max(0, 400000 - perfAmt);
+  const rem2 = Math.max(0, 800000 - perfAmt);
+  document.getElementById('prog1Text').innerHTML = perfAmt >= 400000
+    ? `<span class="achieved">✅ 달성 (${fmt(perfAmt)})</span>`
+    : `${fmt(perfAmt)} / 40만원 — ${fmt(rem1)} 부족`;
+  document.getElementById('prog2Text').innerHTML = perfAmt >= 800000
+    ? `<span class="achieved">✅ 달성 (${fmt(perfAmt)})</span>`
+    : `${fmt(perfAmt)} / 80만원 — ${fmt(rem2)} 부족`;
+
+  // 카테고리 테이블
+  const tbody = document.getElementById('categoryTable');
+  tbody.innerHTML = '';
+  let grandCalc = 0, grandFile = 0, grandAmt = 0;
+
+  CATEGORIES.forEach(cat => {
+    const agg = catAgg[cat.name];
+    if (agg.amt === 0) return;
+
+    const rateStr = cat.rate === null ? '별도할인' : (cat.rate * 100).toFixed(0) + '%';
+    const limitStr = currentTier === 0 ? '-'
+      : cat.rate === null ? '-'
+      : fmtP(cat.limits[currentTier - 1]) + ' 한도';
+    const calcStr = agg.calc === null ? '-' : agg.calc === 0 ? '0P (미달성)' : fmtP(agg.calc);
+    const fileStr = fmtP(agg.file);
+
+    let diffStr = '-', diffCls = 'diff-na';
+    if (agg.calc !== null && agg.calc !== 0) {
+      const d = agg.file - agg.calc;
+      if (Math.abs(d) <= 5) { diffStr = '✅'; diffCls = 'diff-ok'; }
+      else { diffStr = `⚠️ ${d > 0 ? '+' : ''}${fmtP(d)}`; diffCls = 'diff-warn'; }
+    }
+
+    const groupBadge = cat.group === 'Biz Favorite'
+      ? `<span class="badge badge-fav">Biz Favorite${cat.exempt ? ' 실적유예' : ''}</span>`
+      : `<span class="badge badge-basic">Biz Basic</span>`;
+
+    tbody.innerHTML += `<tr>
+      <td>${cat.name}</td>
+      <td>${groupBadge}</td>
+      <td class="text-right">${fmt(agg.amt)}</td>
+      <td class="text-right">${rateStr}<br><small style="color:#9ca3af">${limitStr}</small></td>
+      <td class="text-right">${calcStr}</td>
+      <td class="text-right">${fileStr}</td>
+      <td class="text-right ${diffCls}">${diffStr}</td>
+    </tr>`;
+
+    grandAmt += agg.amt;
+    grandCalc += agg.calc || 0;
+    grandFile += agg.file;
+  });
+
+  if (otherAmt > 0) {
+    tbody.innerHTML += `<tr style="color:#6b7280">
+      <td>기타</td><td><span class="badge badge-other">기타</span></td>
+      <td class="text-right">${fmt(otherAmt)}</td>
+      <td></td><td class="text-right">-</td>
+      <td class="text-right">${fmtP(otherFile)}</td>
+      <td class="text-right diff-na">-</td>
+    </tr>`;
+    grandAmt += otherAmt;
+    grandFile += otherFile;
+  }
+
+  const gd = grandFile - grandCalc;
+  tbody.innerHTML += `<tr class="total-row">
+    <td>합계</td><td></td>
+    <td class="text-right">${fmt(totalAmt)}</td><td></td>
+    <td class="text-right">${fmtP(grandCalc)}</td>
+    <td class="text-right">${fmtP(grandFile)}</td>
+    <td class="text-right ${Math.abs(gd) <= 10 ? 'diff-ok' : 'diff-warn'}">
+      ${Math.abs(gd) <= 10 ? '✅' : `⚠️ ${gd > 0 ? '+' : ''}${fmtP(gd)}`}
+    </td>
+  </tr>`;
+
+  renderTx();
+  document.getElementById('dashboard').style.display = 'block';
+}
+
+function renderTx() {
+  const list = document.getElementById('txList');
+  const filtered = transactions.filter(tx => {
+    if (currentFilter === 'all') return true;
+    if (currentFilter === 'fav') return tx.cat && tx.cat.group === 'Biz Favorite';
+    if (currentFilter === 'basic') return tx.cat && tx.cat.group === 'Biz Basic';
+    if (currentFilter === 'other') return !tx.cat;
+    return true;
+  });
+
+  if (!filtered.length) {
+    list.innerHTML = '<div class="empty-state">해당 거래 없음</div>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(tx => {
+    const catBadge = tx.cat
+      ? `<span class="badge ${tx.cat.group === 'Biz Favorite' ? 'badge-fav' : 'badge-basic'}">${tx.cat.name}</span>`
+      : `<span class="badge badge-other">기타</span>`;
+    const amtCls = tx.cat && tx.cat.exempt ? 'tx-amount exempt' : 'tx-amount';
+    const fp = tx.filePoints ? fmtP(tx.filePoints) : '-';
+    return `<div class="tx-row">
+      <span class="tx-date">${tx.date}</span>
+      <span class="tx-merchant" title="${tx.merchant}">${tx.merchant}</span>
+      <span class="${amtCls}">${fmt(tx.amount)}</span>
+      <span class="tx-filepoints">${fp}</span>
+      <span class="tx-cat">${catBadge}</span>
+    </div>`;
+  }).join('');
+}
+
+// ─── Excel 파싱 ────────────────────────────────────────────────────
+function parseExcel(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+      transactions = [];
+      for (const row of rows) {
+        const merchant = String(row[4] || '').trim();
+        if (!merchant) continue;
+
+        const rawAmt = String(row[6] || '').replace(/,/g, '');
+        const amount = parseFloat(rawAmt);
+        if (isNaN(amount) || amount <= 0) continue;
+
+        // 날짜 파싱
+        const ds = String(row[1] || '').replace(/[.\-\/]/g, '');
+        let date = ds;
+        if (ds.length === 8) date = `${ds.slice(0,4)}.${ds.slice(4,6)}.${ds.slice(6,8)}`;
+
+        const rawFp = String(row[13] || '').replace(/,/g, '');
+        const filePoints = parseFloat(rawFp) || 0;
+
+        transactions.push({ date, merchant, amount, filePoints, cat: categorize(merchant) });
+      }
+
+      if (!transactions.length) {
+        alert('거래 데이터를 찾을 수 없습니다.\n파일 형식을 확인해주세요.');
+        return;
+      }
+
+      transactions.sort((a, b) => a.date.localeCompare(b.date));
+
+      // 업로드 영역 갱신
+      const ua = document.getElementById('uploadArea');
+      ua.innerHTML = `
+        <div class="upload-icon">✅</div>
+        <p><strong>${file.name}</strong> 로드 완료 (${transactions.length}건)</p>
+        <p style="margin-top:6px;font-size:0.78rem;color:#9ca3af">다른 파일을 불러오려면 클릭</p>
+        <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none">
+      `;
+      ua.classList.add('upload-loaded');
+      ua.onclick = () => document.getElementById('fileInput').click();
+      document.getElementById('fileInput').onchange = e => { if(e.target.files[0]) parseExcel(e.target.files[0]); };
+
+      render();
+    } catch(err) {
+      alert('파일 읽기 오류: ' + err.message);
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ─── 이벤트 ───────────────────────────────────────────────────────
+const uploadArea = document.getElementById('uploadArea');
+uploadArea.onclick = () => document.getElementById('fileInput').click();
+document.getElementById('fileInput').onchange = e => { if(e.target.files[0]) parseExcel(e.target.files[0]); };
+uploadArea.ondragover = e => { e.preventDefault(); uploadArea.classList.add('drag-over'); };
+uploadArea.ondragleave = () => uploadArea.classList.remove('drag-over');
+uploadArea.ondrop = e => {
+  e.preventDefault();
+  uploadArea.classList.remove('drag-over');
+  if(e.dataTransfer.files[0]) parseExcel(e.dataTransfer.files[0]);
+};
+
+document.querySelectorAll('.tier-btn').forEach(btn => {
+  btn.onclick = function() {
+    currentTier = parseInt(this.dataset.tier);
+    document.querySelectorAll('.tier-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    if (transactions.length) render();
+  };
+});
+
+document.querySelectorAll('.tx-filter-btn').forEach(btn => {
+  btn.onclick = function() {
+    currentFilter = this.dataset.filter;
+    document.querySelectorAll('.tx-filter-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    renderTx();
+  };
+});
+</script>
+</body>
+</html>
