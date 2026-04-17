@@ -345,7 +345,8 @@ function renderCaptureSnapshot() {
   const yesterdayDate = parseLocalDate(yesterdayDateString);
   const yesterdayRecord = sheetData[yesterdayDateString];
   const yesterdayCount = MEMBERS.filter(member => yesterdayRecord?.[member]).length;
-  const yesterdayRate = yesterdayRecord ? Math.round((yesterdayCount / MEMBERS.length) * 100) : 0;
+  const yesterdayTotal = yesterdayRecord ? Object.keys(yesterdayRecord).length : MEMBERS.length;
+  const yesterdayRate = yesterdayRecord ? Math.round((yesterdayCount / yesterdayTotal) * 100) : 0;
   const yesterdayRingProgress = document.getElementById("yesterday-ring-progress");
   const yesterdayRingGlow = document.getElementById("yesterday-ring-glow");
 
@@ -356,7 +357,7 @@ function renderCaptureSnapshot() {
   yesterdayRingProgress.style.strokeDashoffset = yesterdayRecord ? String(100 - yesterdayRate) : "100";
   yesterdayRingGlow.style.strokeDashoffset = yesterdayRecord ? String(100 - yesterdayRate) : "100";
   document.getElementById("yesterday-count-display").textContent =
-    yesterdayRecord ? `${yesterdayCount} / ${MEMBERS.length}명 인증` : "전날 데이터 대기 중";
+    yesterdayRecord ? `${yesterdayCount} / ${yesterdayTotal}명 인증` : "전날 데이터 대기 중";
 
   const allDates = Object.keys(sheetData).sort().filter(date => date <= yesterdayDateString);
   const recent7Dates = allDates.slice(-7);
@@ -431,7 +432,7 @@ function renderToday() {
   const date = getSelectedDate();
   const record = sheetData[date] || {};
   const checkedCount = MEMBERS.filter(member => record[member]).length;
-  const total = MEMBERS.length;
+  const total = Object.keys(record).length || MEMBERS.length;
   const rate = total === 0 ? 0 : Math.round((checkedCount / total) * 100);
 
   document.getElementById("rate-display").textContent = `${rate}%`;
@@ -511,7 +512,8 @@ function renderStats() {
 
   const dateStats = dates.map(date => {
     const count = MEMBERS.filter(member => sheetData[date]?.[member]).length;
-    const rate = (count / MEMBERS.length) * 100;
+    const dateTotal = Object.keys(sheetData[date] || {}).length || MEMBERS.length;
+    const rate = (count / dateTotal) * 100;
     const dt = parseLocalDate(date);
     return {
       date,
