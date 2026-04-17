@@ -711,7 +711,10 @@ async function loadFromSheets() {
 
       Object.entries(dateColumns).forEach(([colIndex, dateValue]) => {
         if (!nextData[dateValue]) nextData[dateValue] = {};
-        nextData[dateValue][name] = row[Number(colIndex)] === "O";
+        const cell = row[Number(colIndex)];
+        if (cell === "O" || cell === "X") {
+          nextData[dateValue][name] = cell === "O";
+        }
       });
     }
 
