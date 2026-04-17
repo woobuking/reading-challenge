@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🏆서포터즈3기 독서 챌린지🏆</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      padding: 16px;
+    }
+    header { text-align: center; margin-bottom: 20px; }
+    header h1 { font-size: 22px; font-weight: 700; color: #1a202c; }
+    header p { font-size: 13px; color: #718096; margin-top: 4px; }
+    .date-bar {
+      display: flex; align-items: center; gap: 8px;
+      background: #fff; border-radius: 12px; padding: 12px 16px;
+      margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    .date-bar label { font-size: 14px; font-weight: 600; color: #4a5568; white-space: nowrap; }
+    .date-bar input[type="date"] {
+      flex: 1; border: 1px solid #e2e8f0; border-radius: 8px;
+      padding: 6px 10px; font-size: 14px; color: #2d3748; outline: none;
+    }
+    .date-bar input[type="date"]:focus { border-color: #667eea; }
+    .stat-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 16px; padding: 20px; margin-bottom: 16px;
+      color: #fff; text-align: center;
+      box-shadow: 0 4px 12px rgba(102,126,234,0.4);
+    }
+    .stat-card .rate { font-size: 48px; font-weight: 800; line-height: 1; }
+    .stat-card .rate-label { font-size: 14px; opacity: 0.85; margin-top: 6px; }
+    .stat-card .count-label { font-size: 16px; font-weight: 600; margin-top: 8px; }
+    .progress-bar {
+      background: rgba(255,255,255,0.3); border-radius: 100px;
+      height: 8px; margin-top: 12px; overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%; background: #fff; border-radius: 100px; transition: width 0.4s ease;
+    }
+    .section-title {
+      font-size: 13px; font-weight: 600; color: #718096;
+      text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;
+    }
+    .member-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 10px; margin-bottom: 20px;
+    }
+    .member-btn {
+      background: #fff; border: 2px solid #e2e8f0; border-radius: 12px;
+      padding: 14px 8px; text-align: center; cursor: pointer;
+      transition: all 0.15s ease; font-size: 14px; font-weight: 600;
+      color: #4a5568; position: relative; user-select: none;
+    }
+    .member-btn:active { transform: scale(0.95); }
+    .member-btn.checked { background: #ebf4ff; border-color: #667eea; color: #434190; }
+    .member-btn.checked::after {
+      content: '✓'; position: absolute; top: 6px; right: 8px;
+      font-size: 12px; color: #667eea; font-weight: 800;
+    }
+    .action-row { display: flex; gap: 10px; margin-bottom: 16px; }
+    .btn {
+      flex: 1; padding: 14px; border-radius: 12px; border: none;
+      font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.15s ease;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff; box-shadow: 0 4px 12px rgba(102,126,234,0.4);
+    }
+    .btn-secondary { background: #fff; color: #4a5568; border: 2px solid #e2e8f0; }
+    .btn-danger { background: #fff; color: #e53e3e; border: 2px solid #fed7d7; }
+    .toast {
+      position: fixed; bottom: 24px; left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #2d3748; color: #fff; padding: 12px 20px;
+      border-radius: 100px; font-size: 14px; font-weight: 600;
+      white-space: nowrap; transition: transform 0.3s ease;
+      z-index: 999; box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.success { background: #38a169; }
+    .toast.error { background: #e53e3e; }
+    .loading-overlay {
+      position: fixed; inset: 0; background: rgba(255,255,255,0.8);
+      display: none; align-items: center; justify-content: center; z-index: 1000;
+    }
+    .spinner {
+      width: 40px; height: 40px; border: 4px solid #e2e8f0;
+      border-top-color: #667eea; border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>🏆서포터즈3기 독서 챌린지🏆</h1>
+    <p>전체 22명</p>
+  </header>
+
+  <div class="date-bar">
+    <label>날짜</label>
+    <input type="date" id="date-picker" />
+  </div>
+
+  <div class="stat-card">
+    <div class="rate" id="rate-display">0%</div>
+    <div class="rate-label">오늘의 챌린지 성공률</div>
+    <div class="count-label" id="count-display">0 / 21명 인증</div>
+    <div class="progress-bar">
+      <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+  </div>
+
+  <div class="section-title">멤버 인증 현황</div>
+  <div class="member-grid" id="member-grid"></div>
+
+  <div class="action-row">
+    <button class="btn btn-primary" onclick="syncToSheets()">📊 구글 시트 저장</button>
+    <button class="btn btn-secondary" onclick="loadFromSheets()">🔄 시트에서 불러오기</button>
+  </div>
+  <div class="action-row">
+    <button class="btn btn-danger" onclick="resetToday()">↩ 오늘 초기화</button>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <div class="loading-overlay" id="loading"><div class="spinner"></div></div>
+
+<script>
+// =====================
+//  하드코딩 설정값
+// =====================
+const SHEET_ID      = '1IOY3D3CYQ1R9aYF6QooMucWhYDgSOzGzeHzbSj9i4J8';
+const SHEET_NAME    = '시트2';
+const API_KEY       = 'AIzaSyDqD4ECDE5xaoBeEoRyicDaqUJ5RN-dUgs';
+const CLIENT_ID     = '44215227073-q4rnmebvgdklojddc43dsr1r7gm2qlrc.apps.googleusercontent.com';
+const CLIENT_SECRET = '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';
+const REFRESH_TOKEN = '1//04FjUOlf9xwIiCgYIARAAGAQSNwF-L9Ir5665xGlWI9AO7uWx6DHORfJLypgRnBM44W-BRre85Vkis6UV_NKZHXRjuArPdfwA_wA';
+
+// =====================
+//  고정 멤버
+// =====================
+const MEMBERS = [
+  '롱게임', '비비드드림', '꿈요셉', '사쁘니', '행복소금',
+  '미쁨댁', '우부왕', '금만가', '플리퍼즈', '스테디 릴리',
+  '올댓드림', '오늘날씨맑음', '꿀람쥐', '꿈을 현실로', '뚜연',
+  '라난', '럭셔리 노블', '레리꼬', '부자될또정', '하예', '뿌래랠래', '자산일조', '산골지야'
+];
+
+// =====================
+//  상태
+// =====================
+const STATE_KEY = 'reading_challenge_state';
+
+let state = { records: {} };
+
+let tokenCache = { accessToken: '', tokenExpiry: 0 };
+
+function loadState() {
+  try {
+    const s = localStorage.getItem(STATE_KEY);
+    if (s) state = JSON.parse(s);
+  } catch(e) {}
+}
+
+function saveState() {
+  localStorage.setItem(STATE_KEY, JSON.stringify(state));
+}
+
+// =====================
+//  날짜
+// =====================
+function today() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function getSelectedDate() {
+  return document.getElementById('date-picker').value;
+}
+
+function initDatePicker() {
+  const dp = document.getElementById('date-picker');
+  dp.value = today();
+  dp.addEventListener('change', render);
+}
+
+// =====================
+//  렌더링
+// =====================
+function render() {
+  const date   = getSelectedDate();
+  const record = state.records[date] || {};
+
+  const checkedCount = MEMBERS.filter(m => record[m]).length;
+  const total        = MEMBERS.length;
+  const rate         = Math.round((checkedCount / total) * 100);
+
+  document.getElementById('rate-display').textContent  = `${rate}%`;
+  document.getElementById('count-display').textContent = `${checkedCount} / ${total}명 인증`;
+  document.getElementById('progress-fill').style.width = `${rate}%`;
+
+  const grid = document.getElementById('member-grid');
+  grid.innerHTML = '';
+  MEMBERS.forEach(name => {
+    const btn = document.createElement('button');
+    btn.className = 'member-btn' + (record[name] ? ' checked' : '');
+    btn.textContent = name;
+    btn.onclick = () => toggleMember(name);
+    grid.appendChild(btn);
+  });
+}
+
+// =====================
+//  인증 토글 & 초기화
+// =====================
+function toggleMember(name) {
+  const date = getSelectedDate();
+  if (!state.records[date]) state.records[date] = {};
+  state.records[date][name] = !state.records[date][name];
+  saveState();
+  render();
+}
+
+function resetToday() {
+  const date = getSelectedDate();
+  if (!confirm(`${date} 인증 기록을 초기화할까요?`)) return;
+  delete state.records[date];
+  saveState();
+  render();
+  showToast('초기화 완료');
+}
+
+// =====================
+//  토큰 자동 갱신
+// =====================
+async function getValidAccessToken() {
+  if (tokenCache.accessToken && tokenCache.tokenExpiry > Date.now() + 5 * 60 * 1000) {
+    return tokenCache.accessToken;
+  }
+
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id:     CLIENT_ID,
+      client_secret: CLIENT_SECRET,
+      refresh_token: REFRESH_TOKEN,
+      grant_type:    'refresh_token'
+    })
+  });
+
+  const data = await res.json();
+  if (!data.access_token) throw new Error('토큰 갱신 실패: ' + (data.error_description || data.error));
+
+  tokenCache.accessToken = data.access_token;
+  tokenCache.tokenExpiry = Date.now() + (data.expires_in || 3600) * 1000;
+  return tokenCache.accessToken;
+}
+
+// =====================
+//  시트에서 불러오기
+// =====================
+async function loadFromSheets() {
+  setLoading(true);
+  try {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(SHEET_NAME)}?key=${API_KEY}`;
+    const res  = await fetch(url);
+    const data = await res.json();
+
+    if (!data.values) { showToast('시트에 데이터가 없습니다'); return; }
+
+    const rows      = data.values;
+    const headerRow = rows[0] || [];
+    const SPECIAL   = ['챌린지 성공', '챌린지 성공률'];
+
+    // 헤더에서 날짜 열 파싱 (M/D → YYYY-MM-DD)
+    const dateColumns = {};
+    for (let i = 1; i < headerRow.length; i++) {
+      const label = headerRow[i];
+      if (!label || SPECIAL.includes(label)) continue;
+      const parts = label.split('/');
+      if (parts.length === 2) {
+        const m = String(parseInt(parts[0])).padStart(2, '0');
+        const d = String(parseInt(parts[1])).padStart(2, '0');
+        dateColumns[i] = `2026-${m}-${d}`;
+      }
+    }
+
+    // 멤버별 O/X 읽기
+    const newRecords = {};
+    for (let rowI = 1; rowI < rows.length; rowI++) {
+      const row  = rows[rowI];
+      const name = row[0];
+      if (!name || SPECIAL.includes(name)) continue;
+      if (!MEMBERS.includes(name)) continue;
+
+      for (const [colIdx, dateStr] of Object.entries(dateColumns)) {
+        const val = row[parseInt(colIdx)] || '';
+        if (!newRecords[dateStr]) newRecords[dateStr] = {};
+        newRecords[dateStr][name] = (val === 'O');
+      }
+    }
+
+    state.records = newRecords;
+    saveState();
+    render();
+    showToast('✅ 시트에서 불러왔습니다!', 'success');
+  } catch(e) {
+    showToast(`❌ ${e.message}`, 'error');
+    console.error(e);
+  } finally {
+    setLoading(false);
+  }
+}
+
+// =====================
+//  구글 시트 저장
+// =====================
+async function syncToSheets() {
+  setLoading(true);
+  try {
+    const token  = await getValidAccessToken();
+    const date   = getSelectedDate();
+    const record = state.records[date] || {};
+
+    const [, month, day] = date.split('-');
+    const dateLabel = `${parseInt(month)}/${parseInt(day)}`;
+
+    // 전체 시트 읽기
+    const readUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(SHEET_NAME)}?key=${API_KEY}`;
+    const readRes = await fetch(readUrl);
+    const readData = await readRes.json();
+
+    const allRows   = readData.values || [];
+    const headerRow = [...(allRows[0] || [])];
+    const batchData = [];
+
+    // A1 헤더
+    if (headerRow[0] !== '닉네임') {
+      batchData.push({ range: `${SHEET_NAME}!A1`, values: [['닉네임']] });
+      headerRow[0] = '닉네임';
+    }
+
+    // 날짜 열 위치
+    let dateColIndex = headerRow.indexOf(dateLabel);
+    if (dateColIndex === -1) {
+      dateColIndex = Math.max(headerRow.length, 1);
+      batchData.push({
+        range: `${SHEET_NAME}!${colLetter(dateColIndex + 1)}1`,
+        values: [[dateLabel]]
+      });
+      headerRow[dateColIndex] = dateLabel;
+    }
+    const col = colLetter(dateColIndex + 1);
+
+    // 멤버별 이름 & O/X
+    MEMBERS.forEach((name, i) => {
+      const rowNum = i + 2;
+      batchData.push({ range: `${SHEET_NAME}!A${rowNum}`, values: [[name]] });
+      batchData.push({
+        range: `${SHEET_NAME}!${col}${rowNum}`,
+        values: [[record[name] ? 'O' : 'X']]
+      });
+    });
+
+    // 챌린지 성공 & 성공률
+    const checkedCount = MEMBERS.filter(m => record[m]).length;
+    const rate         = (checkedCount / MEMBERS.length * 100).toFixed(2) + '%';
+    const successRow   = MEMBERS.length + 2;
+    const rateRow      = MEMBERS.length + 3;
+
+    batchData.push({ range: `${SHEET_NAME}!A${successRow}`,      values: [['챌린지 성공']] });
+    batchData.push({ range: `${SHEET_NAME}!${col}${successRow}`, values: [[checkedCount]] });
+    batchData.push({ range: `${SHEET_NAME}!A${rateRow}`,         values: [['챌린지 성공률']] });
+    batchData.push({ range: `${SHEET_NAME}!${col}${rateRow}`,    values: [[rate]] });
+
+    // batchUpdate
+    const updateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values:batchUpdate`;
+    const updateRes = await fetch(updateUrl, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ valueInputOption: 'RAW', data: batchData })
+    });
+
+    if (!updateRes.ok) {
+      const err = await updateRes.json();
+      throw new Error(err.error?.message || '저장 실패');
+    }
+
+    showToast('✅ 구글 시트에 저장되었습니다!', 'success');
+  } catch(e) {
+    showToast(`❌ ${e.message}`, 'error');
+    console.error(e);
+  } finally {
+    setLoading(false);
+  }
+}
+
+// 열 번호 → 알파벳
+function colLetter(n) {
+  let result = '';
+  while (n > 0) {
+    const rem = (n - 1) % 26;
+    result = String.fromCharCode(65 + rem) + result;
+    n = Math.floor((n - 1) / 26);
+  }
+  return result;
+}
+
+// =====================
+//  유틸
+// =====================
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (type ? ` ${type}` : '');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+function setLoading(on) {
+  document.getElementById('loading').style.display = on ? 'flex' : 'none';
+}
+
+// =====================
+//  앱 시작 (시트에서 자동 로드)
+// =====================
+loadState();
+initDatePicker();
+render();
+loadFromSheets();  // 앱 열 때 자동으로 시트 데이터 불러오기
+</script>
+</body>
+</html>
