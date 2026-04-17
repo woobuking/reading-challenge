@@ -12,6 +12,14 @@ const MEMBERS = [
   "라난", "럭셔리 노블", "레리꼬", "부자될또정", "하예", "뿌래랠래", "자산일조", "산골지야"
 ];
 
+const MEMBER_JOIN_DATES = {
+  "산골지야": "2026-04-19"
+};
+
+function getActiveMembers(date) {
+  return MEMBERS.filter(name => !MEMBER_JOIN_DATES[name] || MEMBER_JOIN_DATES[name] <= date);
+}
+
 const CHALLENGE = {
   title: "고전이 답했다: 마땅히 가져야 할 부에 대하여",
   startDate: "2026-03-27",
@@ -344,8 +352,9 @@ function renderCaptureSnapshot() {
   const yesterdayDateString = getPreviousDateString(selectedDateString);
   const yesterdayDate = parseLocalDate(yesterdayDateString);
   const yesterdayRecord = sheetData[yesterdayDateString];
-  const yesterdayCount = MEMBERS.filter(member => yesterdayRecord?.[member]).length;
-  const yesterdayTotal = yesterdayRecord ? Object.keys(yesterdayRecord).length : MEMBERS.length;
+  const yesterdayActive = getActiveMembers(yesterdayDateString);
+  const yesterdayCount = yesterdayActive.filter(member => yesterdayRecord?.[member]).length;
+  const yesterdayTotal = yesterdayActive.length;
   const yesterdayRate = yesterdayRecord ? Math.round((yesterdayCount / yesterdayTotal) * 100) : 0;
   const yesterdayRingProgress = document.getElementById("yesterday-ring-progress");
   const yesterdayRingGlow = document.getElementById("yesterday-ring-glow");
@@ -431,8 +440,9 @@ function renderRoadmap(state) {
 function renderToday() {
   const date = getSelectedDate();
   const record = sheetData[date] || {};
-  const checkedCount = MEMBERS.filter(member => record[member]).length;
-  const total = Object.keys(record).length || MEMBERS.length;
+  const activeMembers = getActiveMembers(date);
+  const checkedCount = activeMembers.filter(member => record[member]).length;
+  const total = activeMembers.length;
   const rate = total === 0 ? 0 : Math.round((checkedCount / total) * 100);
 
   document.getElementById("rate-display").textContent = `${rate}%`;
@@ -511,9 +521,9 @@ function renderStats() {
   });
 
   const dateStats = dates.map(date => {
-    const count = MEMBERS.filter(member => sheetData[date]?.[member]).length;
-    const dateTotal = Object.keys(sheetData[date] || {}).length || MEMBERS.length;
-    const rate = (count / dateTotal) * 100;
+    const activeMembersForDate = getActiveMembers(date);
+    const count = activeMembersForDate.filter(member => sheetData[date]?.[member]).length;
+    const rate = (count / activeMembersForDate.length) * 100;
     const dt = parseLocalDate(date);
     return {
       date,
