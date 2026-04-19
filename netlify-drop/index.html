@@ -204,6 +204,7 @@ body::before {
 }
 
 .snapshot-date-control {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -212,6 +213,7 @@ body::before {
 
 .snapshot-date-button {
   position: relative;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   gap: 12px;
@@ -252,15 +254,28 @@ body::before {
 
 .snapshot-date-input {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  left: 0;
+  top: 0;
+  width: 1px;
+  height: 1px;
   margin: 0;
   opacity: 0;
-  cursor: pointer;
+  pointer-events: none;
   border: 0;
   appearance: none;
   -webkit-appearance: none;
+}
+
+@media (pointer: coarse) {
+  .snapshot-date-input {
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+    pointer-events: auto;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
 }
 
 .snapshot-date-input:focus {
@@ -1711,11 +1726,11 @@ body::before {
       <div class="capture-top">
         <div class="snapshot-date-control">
           <div class="capture-kicker">Daily Snapshot</div>
-          <label class="snapshot-date-button" id="snapshot-date-trigger" for="date-picker">
+          <button class="snapshot-date-button" id="snapshot-date-trigger" type="button" aria-controls="date-picker" aria-label="기준 날짜 변경">
             <span id="snapshot-title-date">오늘 날짜</span>
             <span class="snapshot-date-button-hint">날짜 변경</span>
-            <input class="snapshot-date-input" type="date" id="date-picker" aria-label="기준 날짜">
-          </label>
+          </button>
+          <input class="snapshot-date-input" type="date" id="date-picker" aria-label="기준 날짜">
         </div>
       </div>
 
@@ -1942,58 +1957,187 @@ function getActiveMembers(date) {
   return MEMBERS.filter(name => !MEMBER_JOIN_DATES[name] || MEMBER_JOIN_DATES[name] <= date);
 }
 
-const CHALLENGE = {
-  title: "고전이 답했다: 마땅히 가져야 할 부에 대하여",
-  startDate: "2026-03-27",
-  chaptersPerDay: 2,
-  chapters: [
-    "금은 원래 흙이었다",
-    "개츠비와 이노크, 두 가지 죽음 앞에서",
-    "기회는 반드시 위기 속에서 나온다",
-    "10년 주기론",
-    "돈이 좋아하는 것들",
-    "오늘의 법칙",
-    "좋은 돈과 나쁜 돈",
-    "부자가 되는 건 일거리가 달라지는 것",
-    "자발적 피로를 선택하라",
-    "부시맨의 콜라병",
-    "무엇을 기다리는가",
-    "경기가 좋지 않을 때 해야 하는 것",
-    "가장 절망적인 악덕은 무지다",
-    "돈을 부르는 자세가 있다",
-    "낚시로부터 배운 것",
-    "1달러를 벌어보자",
-    "경쟁하지 말고 독점하는 법",
-    "아무도 거들떠보지 않는 곳에 돈이 있다",
-    "생각과 경험을 팔아야 큰돈을 벌 수 있다",
-    "소비자가 아닌 생산자가 되어라",
-    "위대한 3분의 법칙",
-    "결국, 한 단어를 찾는 힘이다",
-    "성공을 설명하는 하나의 단어",
-    "이기적인 마음을 이용하라",
-    "우연한 기회에 발견하는 것",
-    "당연하다는 말의 의미",
-    "일을 대하는 태도",
-    "끈기의 뜻",
-    "한 우물을 팔 것인가, 여러 우물을 팔 것인가",
-    "투자의 5계명",
-    "공부하고, 투자하라, 그리고 기다려라",
-    "당신의 ‘곰스크’는 어디에 있는가",
-    "변하지 않는 성공의 단 한 가지 법칙",
-    "무한히 애쓸 수 있는 능력",
-    "돈 버는 습관: 어떤, 행위를, 저절로",
-    "일론 머스크에게는 있고, 당신에게는 없는 것",
-    "호리병이 아닌 대접에 담을 것",
-    "미래를 예측하는 법",
-    "근로 소득을 높이는 방법",
-    "‘이곳’에서 ‘저곳’으로 넘어가는 원리",
-    "뻔하게 사는 게 정답이다",
-    "2상상의 거인을 키워라",
-    "“누구나 다 그렇게 될 수는 없잖아요?”",
-    "고통을 이기지 못하면 고통이 그대를 이길 것이다",
-    "비밀의 개수와 부는 비례한다"
-  ]
-};
+const CHALLENGES = [
+  {
+    title: "고전이 답했다: 마땅히 가져야 할 부에 대하여",
+    startDate: "2026-03-27",
+    chaptersPerDay: 2,
+    chapters: [
+      "금은 원래 흙이었다",
+      "개츠비와 이노크, 두 가지 죽음 앞에서",
+      "기회는 반드시 위기 속에서 나온다",
+      "10년 주기론",
+      "돈이 좋아하는 것들",
+      "오늘의 법칙",
+      "좋은 돈과 나쁜 돈",
+      "부자가 되는 건 일거리가 달라지는 것",
+      "자발적 피로를 선택하라",
+      "부시맨의 콜라병",
+      "무엇을 기다리는가",
+      "경기가 좋지 않을 때 해야 하는 것",
+      "가장 절망적인 악덕은 무지다",
+      "돈을 부르는 자세가 있다",
+      "낚시로부터 배운 것",
+      "1달러를 벌어보자",
+      "경쟁하지 말고 독점하는 법",
+      "아무도 거들떠보지 않는 곳에 돈이 있다",
+      "생각과 경험을 팔아야 큰돈을 벌 수 있다",
+      "소비자가 아닌 생산자가 되어라",
+      "위대한 3분의 법칙",
+      "결국, 한 단어를 찾는 힘이다",
+      "성공을 설명하는 하나의 단어",
+      "이기적인 마음을 이용하라",
+      "우연한 기회에 발견하는 것",
+      "당연하다는 말의 의미",
+      "일을 대하는 태도",
+      "끈기의 뜻",
+      "한 우물을 팔 것인가, 여러 우물을 팔 것인가",
+      "투자의 5계명",
+      "공부하고, 투자하라, 그리고 기다려라",
+      "당신의 ‘곰스크’는 어디에 있는가",
+      "변하지 않는 성공의 단 한 가지 법칙",
+      "무한히 애쓸 수 있는 능력",
+      "돈 버는 습관: 어떤, 행위를, 저절로",
+      "일론 머스크에게는 있고, 당신에게는 없는 것",
+      "호리병이 아닌 대접에 담을 것",
+      "미래를 예측하는 법",
+      "근로 소득을 높이는 방법",
+      "‘이곳’에서 ‘저곳’으로 넘어가는 원리",
+      "뻔하게 사는 게 정답이다",
+      "상상의 거인을 키워라",
+      "“누구나 다 그렇게 될 수는 없잖아요?”",
+      "고통을 이기지 못하면 고통이 그대를 이길 것이다",
+      "비밀의 개수와 부는 비례한다"
+    ]
+  },
+  {
+    title: "사장학개론",
+    startDate: "2026-04-19",
+    chaptersPerDay: 4,
+    chapters: [
+      "나는 장사를 하는가? 사업을 하는가?",
+      "수입의 네 가지 경로",
+      "당신 사업의 PER는 얼마인가?",
+      "칭찬의 역설",
+      "명령, 지시를 내리는 노하우",
+      "나쁜 지시와 올바른 지시",
+      "매출이 오르면 사람을 쓸까? 사람을 써서 매출을 올릴까?",
+      "내 경쟁자 100% 이기는 법",
+      "결정을 내리기 쉽지 않을 때",
+      "중요한 결정을 처리하는 법",
+      "또 실패하면 그 다음 날 해야 할 일",
+      "사업이 커지면서 생기는 함정 다섯 가지",
+      "개국 공신의 반란, 그리고 토사구팽",
+      "옆문 정책의 가치",
+      "사업이 망해가는 12가지 징조",
+      "진짜 부자가 되는 4가지 능력",
+      "내가 괜찮은 사장이 돼 가는지 알 수 있는 몇 가지 징조들",
+      "성공한 사람과 크게 성공한 사람의 13가지 차이점",
+      "충고를 무시해야 할 때",
+      "모든 지시의 끝은 마무리 보고",
+      "공은 버리고 실을 얻는 법",
+      "아내의 절대적 지지를 얻는 법",
+      "직원 수에 따른 사장의 행동 변화",
+      "문자로 질문 혹은 요청할 때 주의 할 것 7가지",
+      "회사 스토리 만드는 법",
+      "내 상품이나 서비스 가격을 정할 때 주의할 점",
+      "모든 비즈니스는 결국 부동산과 금융을 만난다.",
+      "미국에 진출해야 국제브랜드가 된다",
+      "칭찬과 비난을 대하는 태도",
+      "상대의 이름을 기억하는 것의 가치",
+      "정리, 정돈, 청소, 청결의 힘",
+      "훌륭한 경쟁자는 축복",
+      "나의 독립기념일",
+      "한 가족이 가난에서 벗어나는데 걸리는 시간",
+      "누군가를 도와야 한다면",
+      "보편적 상식을 갖춘 사람을 구하라",
+      "사실을 찾는 방법",
+      "프레임에서 벗어나기",
+      "모닥불 피우기와 사업의 유사점",
+      "나를 지키던 칼이 나의 목을 겨눈다",
+      "내 매장에서도 물건을 돈 주고 사라",
+      "행운을 만드는 15가지",
+      "왜 생각은 현실이 될까?",
+      "이유 없이 사람들이 나를 싫어하는 3가지 경우의 수",
+      "공생과 협력, 유기적 사업에 대하여",
+      "2년에 한 번씩 사장이 꼭 해야 하는 일",
+      "사장이 되면 무슨 일이 생길까?",
+      "사장의 사치는 어디까지 허용되나?",
+      "규모가 커지면서 변해야 하는 것과 변하지 말아야 하는 사장의 태도",
+      "사장이 되면 친구들을 어떻게 할까?",
+      "경영자가 주의해야 할 호칭들",
+      "회사 이름으로 기부할 때와 개인 자격으로 기부할 때",
+      "나이별로 버는 돈의 모습",
+      "훌륭한 선생의 2가지 조건",
+      "누구를 승진 시킬 것인가?",
+      "좋은 직원을 구하는 법",
+      "좋은 직원인 것 같지만 가장 경계해야 할 직원의 4가지 유형",
+      "사장의 평가와 하급 직원의 평가가 다른 사람들",
+      "2인자 키우기",
+      "직원의 보고를 받는 3대 규칙",
+      "어차피 해고해야 할 직원과 해고 하는 태도",
+      "직원을 해고하는 방법",
+      "직원들의 스스로 일하기를 원한다면",
+      "좋은 직원을 내 보내는 두 가지 경우",
+      "직원은 아랫사람이 아니다",
+      "모든 직원이 우수한 직원인 회사는 가능한가?",
+      "직원에게 존경받으려면",
+      "직원에게 절대 하지 말아야 하는 것 열 가지",
+      "직원을 힘들게 하는 사장의 패턴들",
+      "작은 친절과 불편한 친절",
+      "지분을 주기보다는 이익 배당이 낫다",
+      "급여를 많이 주면 좋은 직원들이 모일까?",
+      "이 중에서 사장의 잘못이 아닌 것은?",
+      "혁명이냐 반란이냐",
+      "사장은 공포를 두려워하면 끝이다",
+      "임대료의 비밀",
+      "프랜차이즈의 성공 핵심 두 가지",
+      "산업의 2대 발달 과정- 대형화, 고급화",
+      "해외시장에 진출하려는 CEO들이 꼭 배워야 할 두 가지",
+      "회사 브랜드가 만들어지는 과정",
+      "사업 이익의 종류",
+      "당신의 출구전략은 무엇인가?",
+      "흑자 도산 347",
+      "왜 우리 회사는 성장이 멈췄는가?",
+      "회사를 상장 시킬 때 미리 주의할 점들",
+      "사업 속에 숨겨진 다른 사업",
+      "사업가들은 어떻게 사기를 당할까?",
+      "당신의 컬러는?",
+      "흰색의 위대함",
+      "모던 제품의 위력",
+      "사장의 사춘기",
+      "착한 사장이 실패하는 7가지 이유",
+      "가족 안에서 가장 성공한 사람의 처신",
+      "중심은 가운데 있지 않다",
+      "실패와 친해져라",
+      "성공한 사업가들의 8가지 공통점",
+      "주변 설득을 위한 전체 과정",
+      "고객은 최고의 인테리어",
+      "돈이 없어 사업을 못한다는 사람에게",
+      "새로운 사업은 어떻게 찾는가?",
+      "성공할 사업과 실패할 사업 구분법 중 한 가지",
+      "사회적 기업을 꿈꾸는 젊은이들의 오해",
+      "왜 사장을 해야 하는가?",
+      "이런 사람은 결국 사장이 답이다",
+      "직원을 '친구'로 만들면 안 되는 이유",
+      "동업을 잘하기 위한 두 가지 조건",
+      "회사의 이름을 짓는 방법",
+      "지우와 승우가 산타를 믿는 이유",
+      "잎사귀가 아닌 가지를 꺾어라",
+      "술 담배 하지 않고 사업할 수 있을까?",
+      "사업가 혹은 유명인과 소통하는 법",
+      "‘성공한 사람의 인생은 성공한 이후에 포장되어 평범한 사람의 인생을 망친다’",
+      "경영자들은 왜 늘 독서를 할까?",
+      "어이없이 회사를 말아먹는 마진율 계산법 실수",
+      "그래프 혹은 통계의 사기를 꿰뚫어 보는 사고",
+      "이익률과 이익",
+      "소득이 발생하는 원리",
+      "전문가들이 사업을 키우지 못하는 이유",
+      "한국음식의 특수성과 서양 고객의 변화",
+      "창업하기에 가장 좋은 나이는?"
+    ]
+  }
+];
 
 const SPECIAL_ROWS = ["챌린지 성공", "챌린지 성공률"];
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -2048,6 +2192,26 @@ function todayString() {
   return getTodayLocal();
 }
 
+function getChallengeFinishDate(challenge) {
+  const startDate = parseLocalDate(challenge.startDate);
+  const plannedDays = Math.ceil(challenge.chapters.length / challenge.chaptersPerDay);
+  return addDays(startDate, plannedDays - 1);
+}
+
+function getChallengeForDate(dateString) {
+  const selectedDate = parseLocalDate(dateString);
+  const sortedChallenges = [...CHALLENGES].sort((a, b) => a.startDate.localeCompare(b.startDate));
+
+  let activeChallenge = sortedChallenges[0];
+  sortedChallenges.forEach(challenge => {
+    if (parseLocalDate(challenge.startDate) <= selectedDate) {
+      activeChallenge = challenge;
+    }
+  });
+
+  return activeChallenge;
+}
+
 function switchTab(tab) {
   activeTab = tab;
   document.querySelectorAll(".tab").forEach(button => {
@@ -2068,7 +2232,7 @@ function initTabs() {
 }
 
 function getSelectedDate() {
-  return document.getElementById("date-picker").value;
+  return document.getElementById("date-picker").value || todayString();
 }
 
 function normalizeManualDateInput(value) {
@@ -2103,28 +2267,23 @@ function openDatePicker(picker) {
     console.warn("showPicker 호출 실패", error);
   }
 
-  const manualInput = window.prompt(
-    "기준 날짜를 입력해 주세요. 예: 2026-04-10 또는 4/10",
-    picker.value || todayString()
-  );
-
-  if (manualInput === null) return;
-
-  const normalized = normalizeManualDateInput(manualInput);
-  if (!normalized) {
-    showToast("날짜 형식은 2026-04-10 또는 4/10으로 입력해 주세요.", "error");
-    return;
-  }
-
-  picker.value = normalized;
-  renderAll();
+  picker.focus({ preventScroll: true });
+  picker.click();
 }
 
 function initDatePicker() {
   const picker = document.getElementById("date-picker");
+  const trigger = document.getElementById("snapshot-date-trigger");
   picker.value = todayString();
   picker.addEventListener("input", renderAll);
   picker.addEventListener("change", renderAll);
+
+  if (trigger) {
+    trigger.addEventListener("click", event => {
+      event.preventDefault();
+      openDatePicker(picker);
+    });
+  }
 }
 
 function renderHeaderChrome() {
@@ -2133,21 +2292,22 @@ function renderHeaderChrome() {
 
 function getChallengeState(dateString) {
   const selectedDate = parseLocalDate(dateString);
-  const startDate = parseLocalDate(CHALLENGE.startDate);
-  const totalChapters = CHALLENGE.chapters.length;
-  const plannedDays = Math.ceil(totalChapters / CHALLENGE.chaptersPerDay);
+  const challenge = getChallengeForDate(dateString);
+  const startDate = parseLocalDate(challenge.startDate);
+  const totalChapters = challenge.chapters.length;
+  const plannedDays = Math.ceil(totalChapters / challenge.chaptersPerDay);
   const finishDate = addDays(startDate, plannedDays - 1);
 
   const diffDays = Math.floor((selectedDate - startDate) / DAY_MS) + 1;
   const beforeStart = diffDays <= 0;
   const elapsedDays = clamp(diffDays, 0, plannedDays);
-  const completedCount = clamp(elapsedDays * CHALLENGE.chaptersPerDay, 0, totalChapters);
-  const currentStartIndex = clamp((elapsedDays - 1) * CHALLENGE.chaptersPerDay, 0, totalChapters);
-  const currentEndIndex = clamp(currentStartIndex + CHALLENGE.chaptersPerDay, 0, totalChapters);
+  const completedCount = clamp(elapsedDays * challenge.chaptersPerDay, 0, totalChapters);
+  const currentStartIndex = clamp((elapsedDays - 1) * challenge.chaptersPerDay, 0, totalChapters);
+  const currentEndIndex = clamp(currentStartIndex + challenge.chaptersPerDay, 0, totalChapters);
   const todayChapters = beforeStart || completedCount === totalChapters && selectedDate > finishDate
     ? []
-    : CHALLENGE.chapters.slice(currentStartIndex, currentEndIndex);
-  const nextChapters = CHALLENGE.chapters.slice(completedCount, completedCount + CHALLENGE.chaptersPerDay);
+    : challenge.chapters.slice(currentStartIndex, currentEndIndex);
+  const nextChapters = challenge.chapters.slice(completedCount, completedCount + challenge.chaptersPerDay);
   const progressPercent = totalChapters === 0 ? 0 : (completedCount / totalChapters) * 100;
   const remainingCount = totalChapters - completedCount;
 
@@ -2163,7 +2323,7 @@ function getChallengeState(dateString) {
     paceTitle = remainingCount === 0 ? "완독 완료" : "예정대로 진행 중";
     paceSub = remainingCount === 0
       ? `${formatShortDate(finishDate)} 기준 목표를 모두 읽었습니다.`
-      : `오늘 포함 하루 ${CHALLENGE.chaptersPerDay}챕터 페이스`;
+      : `오늘 포함 하루 ${challenge.chaptersPerDay}챕터 페이스`;
 
     if (remainingCount === 0) {
       caption = `🏆 ${formatShortDate(finishDate)} 완독 목표 달성`;
@@ -2173,6 +2333,7 @@ function getChallengeState(dateString) {
   }
 
   return {
+    challenge,
     selectedDate,
     startDate,
     finishDate,
@@ -2215,10 +2376,10 @@ function renderChapterList(targetId, items, emptyMessage, tone) {
 function renderBookProgress() {
   const state = getChallengeState(getSelectedDate());
 
-  document.getElementById("book-title").textContent = CHALLENGE.title;
-  document.getElementById("race-book-title").textContent = CHALLENGE.title;
+  document.getElementById("book-title").textContent = state.challenge.title;
+  document.getElementById("race-book-title").textContent = state.challenge.title;
   document.getElementById("book-meta").textContent =
-    `${formatShortDate(state.startDate)} 시작 · 하루 ${CHALLENGE.chaptersPerDay}챕터 · 총 ${state.totalChapters}챕터 · 완독 예정 ${formatShortDate(state.finishDate)}`;
+    `${formatShortDate(state.startDate)} 시작 · 하루 ${state.challenge.chaptersPerDay}챕터 · 총 ${state.totalChapters}챕터 · 완독 예정 ${formatShortDate(state.finishDate)}`;
   document.getElementById("chapter-badge").textContent = `${state.completedCount} / ${state.totalChapters}`;
   document.getElementById("hero-day-label").textContent = state.dayLabel;
   document.getElementById("hero-remaining").textContent = `${state.remainingCount}개`;
@@ -2347,7 +2508,7 @@ function renderRoadmap(state) {
   const activeStart = state.completedCount - state.todayChapters.length;
   const activeEnd = state.completedCount;
 
-  roadmap.innerHTML = CHALLENGE.chapters.map((title, index) => {
+  roadmap.innerHTML = state.challenge.chapters.map((title, index) => {
     let className = "roadmap-item upcoming";
     if (index < activeStart) {
       className = "roadmap-item done";
@@ -2543,7 +2704,7 @@ function parseHeaderToDate(label) {
 
   if (/^\d{1,2}\/\d{1,2}$/.test(text)) {
     const [month, day] = text.split("/");
-    const baseYear = parseLocalDate(CHALLENGE.startDate).getFullYear();
+    const baseYear = parseLocalDate(getSelectedDate() || todayString()).getFullYear();
     return `${baseYear}-${String(Number(month)).padStart(2, "0")}-${String(Number(day)).padStart(2, "0")}`;
   }
 
