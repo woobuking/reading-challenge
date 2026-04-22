@@ -136,12 +136,7 @@
 // =====================
 //  하드코딩 설정값
 // =====================
-const SHEET_ID      = '1IOY3D3CYQ1R9aYF6QooMucWhYDgSOzGzeHzbSj9i4J8';
-const SHEET_NAME    = '시트2';
-const API_KEY       = 'AIzaSyDqD4ECDE5xaoBeEoRyicDaqUJ5RN-dUgs';
-const CLIENT_ID     = '44215227073-q4rnmebvgdklojddc43dsr1r7gm2qlrc.apps.googleusercontent.com';
-const CLIENT_SECRET = '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';
-const REFRESH_TOKEN = '1//04FjUOlf9xwIiCgYIARAAGAQSNwF-L9Ir5665xGlWI9AO7uWx6DHORfJLypgRnBM44W-BRre85Vkis6UV_NKZHXRjuArPdfwA_wA';
+const APPS_SCRIPT_URL = 'REPLACE_WITH_APPS_SCRIPT_WEBAPP_URL';
 
 // =====================
 //  고정 멤버
@@ -159,8 +154,6 @@ const MEMBERS = [
 const STATE_KEY = 'reading_challenge_state';
 
 let state = { records: {} };
-
-let tokenCache = { accessToken: '', tokenExpiry: 0 };
 
 function loadState() {
   try {
@@ -237,77 +230,15 @@ function resetToday() {
 }
 
 // =====================
-//  토큰 자동 갱신
-// =====================
-async function getValidAccessToken() {
-  if (tokenCache.accessToken && tokenCache.tokenExpiry > Date.now() + 5 * 60 * 1000) {
-    return tokenCache.accessToken;
-  }
-
-  const res = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      client_id:     CLIENT_ID,
-      client_secret: CLIENT_SECRET,
-      refresh_token: REFRESH_TOKEN,
-      grant_type:    'refresh_token'
-    })
-  });
-
-  const data = await res.json();
-  if (!data.access_token) throw new Error('토큰 갱신 실패: ' + (data.error_description || data.error));
-
-  tokenCache.accessToken = data.access_token;
-  tokenCache.tokenExpiry = Date.now() + (data.expires_in || 3600) * 1000;
-  return tokenCache.accessToken;
-}
-
-// =====================
-//  시트에서 불러오기
+//  Apps Script에서 불러오기
 // =====================
 async function loadFromSheets() {
   setLoading(true);
   try {
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(SHEET_NAME)}?key=${API_KEY}`;
-    const res  = await fetch(url);
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=load`);
     const data = await res.json();
-
-    if (!data.values) { showToast('시트에 데이터가 없습니다'); return; }
-
-    const rows      = data.values;
-    const headerRow = rows[0] || [];
-    const SPECIAL   = ['챌린지 성공', '챌린지 성공률'];
-
-    // 헤더에서 날짜 열 파싱 (M/D → YYYY-MM-DD)
-    const dateColumns = {};
-    for (let i = 1; i < headerRow.length; i++) {
-      const label = headerRow[i];
-      if (!label || SPECIAL.includes(label)) continue;
-      const parts = label.split('/');
-      if (parts.length === 2) {
-        const m = String(parseInt(parts[0])).padStart(2, '0');
-        const d = String(parseInt(parts[1])).padStart(2, '0');
-        dateColumns[i] = `2026-${m}-${d}`;
-      }
-    }
-
-    // 멤버별 O/X 읽기
-    const newRecords = {};
-    for (let rowI = 1; rowI < rows.length; rowI++) {
-      const row  = rows[rowI];
-      const name = row[0];
-      if (!name || SPECIAL.includes(name)) continue;
-      if (!MEMBERS.includes(name)) continue;
-
-      for (const [colIdx, dateStr] of Object.entries(dateColumns)) {
-        const val = row[parseInt(colIdx)] || '';
-        if (!newRecords[dateStr]) newRecords[dateStr] = {};
-        newRecords[dateStr][name] = (val === 'O');
-      }
-    }
-
-    state.records = newRecords;
+    if (!data.ok) throw new Error(data.error || '불러오기 실패');
+    state.records = data.records || {};
     saveState();
     render();
     showToast('✅ 시트에서 불러왔습니다!', 'success');
@@ -320,106 +251,21 @@ async function loadFromSheets() {
 }
 
 // =====================
-//  구글 시트 저장
+//  Apps Script로 저장
 // =====================
 async function syncToSheets() {
   setLoading(true);
   try {
-    const token  = await getValidAccessToken();
     const date   = getSelectedDate();
     const record = state.records[date] || {};
 
-    const [, month, day] = date.split('-');
-    const dateLabel = `${parseInt(month)}/${parseInt(day)}`;
-
-    const metaUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}?fields=sheets(properties(sheetId,title,gridProperties(columnCount)))&key=${API_KEY}`;
-    const metaRes = await fetch(metaUrl);
-    const metaData = await metaRes.json();
-    const targetSheet = (metaData.sheets || []).find(s => s.properties && s.properties.title === SHEET_NAME);
-    if (!targetSheet) throw new Error(`시트를 찾지 못했습니다: ${SHEET_NAME}`);
-
-    const sheetId = targetSheet.properties.sheetId;
-    let columnCount = targetSheet.properties.gridProperties?.columnCount || 26;
-
-    const readUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(SHEET_NAME)}?key=${API_KEY}`;
-    const readRes = await fetch(readUrl);
-    const readData = await readRes.json();
-
-    const allRows   = readData.values || [];
-    const headerRow = [...(allRows[0] || [])];
-    const batchData = [];
-
-    if (headerRow[0] !== '닉네임') {
-      batchData.push({ range: `${SHEET_NAME}!A1`, values: [['닉네임']] });
-      headerRow[0] = '닉네임';
-    }
-
-    let dateColIndex = headerRow.indexOf(dateLabel);
-    if (dateColIndex === -1) {
-      dateColIndex = Math.max(headerRow.length, 1);
-      headerRow[dateColIndex] = dateLabel;
-    }
-
-    const requiredCols = dateColIndex + 1;
-    if (columnCount < requiredCols) {
-      const expandUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}:batchUpdate`;
-      const expandRes = await fetch(expandUrl, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          requests: [{
-            appendDimension: {
-              sheetId,
-              dimension: 'COLUMNS',
-              length: requiredCols - columnCount
-            }
-          }]
-        })
-      });
-      if (!expandRes.ok) {
-        const err = await expandRes.json();
-        throw new Error(err.error?.message || '열 확장 실패');
-      }
-      columnCount = requiredCols;
-    }
-
-    batchData.push({
-      range: `${SHEET_NAME}!${colLetter(dateColIndex + 1)}1`,
-      values: [[dateLabel]]
-    });
-
-    const col = colLetter(dateColIndex + 1);
-
-    MEMBERS.forEach((name, i) => {
-      const rowNum = i + 2;
-      batchData.push({ range: `${SHEET_NAME}!A${rowNum}`, values: [[name]] });
-      batchData.push({
-        range: `${SHEET_NAME}!${col}${rowNum}`,
-        values: [[record[name] ? 'O' : 'X']]
-      });
-    });
-
-    const checkedCount = MEMBERS.filter(m => record[m]).length;
-    const rate         = (checkedCount / MEMBERS.length * 100).toFixed(2) + '%';
-    const successRow   = MEMBERS.length + 2;
-    const rateRow      = MEMBERS.length + 3;
-
-    batchData.push({ range: `${SHEET_NAME}!A${successRow}`,      values: [['챌린지 성공']] });
-    batchData.push({ range: `${SHEET_NAME}!${col}${successRow}`, values: [[checkedCount]] });
-    batchData.push({ range: `${SHEET_NAME}!A${rateRow}`,         values: [['챌린지 성공률']] });
-    batchData.push({ range: `${SHEET_NAME}!${col}${rateRow}`,    values: [[rate]] });
-
-    const updateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values:batchUpdate`;
-    const updateRes = await fetch(updateUrl, {
+    const res = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ valueInputOption: 'RAW', data: batchData })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date, record })
     });
-
-    if (!updateRes.ok) {
-      const err = await updateRes.json();
-      throw new Error(err.error?.message || '저장 실패');
-    }
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || '저장 실패');
 
     showToast('✅ 구글 시트에 저장되었습니다!', 'success');
   } catch(e) {
@@ -428,17 +274,6 @@ async function syncToSheets() {
   } finally {
     setLoading(false);
   }
-}
-
-// 열 번호 → 알파벳
-function colLetter(n) {
-  let result = '';
-  while (n > 0) {
-    const rem = (n - 1) % 26;
-    result = String.fromCharCode(65 + rem) + result;
-    n = Math.floor((n - 1) / 26);
-  }
-  return result;
 }
 
 // =====================
